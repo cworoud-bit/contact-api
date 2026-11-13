@@ -78,7 +78,7 @@ describe("POST /api/contact", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const failing = { create: async () => { throw new Error("secret interne: mot de passe DB"); } };
     const res = await request(createApp({ contactRepository: failing })).post("/api/contact").send(valid);
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: "INTERNAL_ERROR" });
     expect(JSON.stringify(res.body)).not.toContain("stack");
     expect(JSON.stringify(res.body)).not.toContain("secret");
