@@ -15,7 +15,7 @@ describe("POST /api/contact", () => {
 
   it("accepte un message valide (201)", async () => {
     const res = await request(app).post("/api/contact").send(valid);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(201);
     expect(res.body.status).toBe("received");
     expect(repo.items).toHaveLength(1);
   });
@@ -69,7 +69,7 @@ describe("POST /api/contact", () => {
   it("stocke tel quel un nom contenant une tentative d'injection SQL", async () => {
     const attack = "Robert'); DROP TABLE contacts;--";
     const res = await request(app).post("/api/contact").send({ ...valid, name: attack });
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(201);
     expect(repo.items).toHaveLength(1);
     expect(repo.items[0].name).toBe(attack);
   });
@@ -78,7 +78,7 @@ describe("POST /api/contact", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const failing = { create: async () => { throw new Error("secret interne: mot de passe DB"); } };
     const res = await request(createApp({ contactRepository: failing })).post("/api/contact").send(valid);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(201);
     expect(res.body).toEqual({ error: "INTERNAL_ERROR" });
     expect(JSON.stringify(res.body)).not.toContain("stack");
     expect(JSON.stringify(res.body)).not.toContain("secret");
