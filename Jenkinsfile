@@ -16,10 +16,11 @@ pipeline {
     stage('Checkout') {
       steps {
         script {
-          def scmVars = checkout scm
-          env.GIT_COMMIT = scmVars.GIT_COMMIT
-          env.SHORT_SHA = scmVars.GIT_COMMIT.take(7)
-        }
+  def scmVars = checkout scm
+  env.GIT_COMMIT = scmVars.GIT_COMMIT
+  env.GIT_BRANCH = scmVars.GIT_BRANCH
+  env.SHORT_SHA  = scmVars.GIT_COMMIT.take(7)
+}
         echo "Commit ${env.SHORT_SHA}"
       }
     }
