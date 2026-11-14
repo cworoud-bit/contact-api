@@ -80,7 +80,10 @@ stage('Debug') {
 }
     stage('Push') {
       when {
-        expression { env.GIT_BRANCH == 'origin/main' }
+        expression {
+    def b = env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
+    return b == 'main' || b == 'origin/main'
+  }
       }
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub',
