@@ -76,7 +76,7 @@ pipeline {
 
     stage('Push') {
       when {
-        expression { env.BRANCH_NAME == 'main' || env.GIT_BRANCH == 'origin/main' }
+        expression { env.GIT_BRANCH == 'origin/main' }
       }
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub',
