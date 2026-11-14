@@ -73,7 +73,11 @@ pipeline {
         archiveArtifacts artifacts: 'image.txt', fingerprint: true
       }
     }
-
+stage('Debug') {
+  steps {
+    echo "GIT_BRANCH=${env.GIT_BRANCH} BRANCH_NAME=${env.BRANCH_NAME}"
+  }
+}
     stage('Push') {
       when {
         expression { env.GIT_BRANCH == 'origin/main' }
