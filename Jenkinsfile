@@ -16,11 +16,11 @@ pipeline {
     stage('Checkout') {
       steps {
         script {
-  def scmVars = checkout scm
-  env.GIT_COMMIT = scmVars.GIT_COMMIT
-  env.GIT_BRANCH = scmVars.GIT_BRANCH
-  env.SHORT_SHA  = scmVars.GIT_COMMIT.take(7)
-}
+          def scmVars = checkout scm
+          env.GIT_COMMIT = scmVars.GIT_COMMIT
+          env.GIT_BRANCH = scmVars.GIT_BRANCH
+          env.SHORT_SHA  = scmVars.GIT_COMMIT.take(7)
+        }
         echo "Commit ${env.SHORT_SHA}"
       }
     }
@@ -34,7 +34,9 @@ pipeline {
         }
       }
       steps {
-        sh 'npm ci'
+        retry(2) {
+          sh 'npm ci --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-timeout=60000'
+        }
       }
     }
 
@@ -61,7 +63,7 @@ pipeline {
             }
           }
           steps {
-            sh 'npx vitest run tests --exclude tests/integration/** --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
+            sh "npx vitest run tests --exclude 'tests/integration/**' --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml"
           }
         }
       }
@@ -74,13 +76,13 @@ pipeline {
         archiveArtifacts artifacts: 'image.txt', fingerprint: true
       }
     }
+
     stage('Push') {
       when {
         expression {
-    def b = env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
-    return b == 'main' || b == 'origin/main'
-  
-  }
+          def b = env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
+          return b == 'main' || b == 'origin/main'
+        }
       }
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub',
