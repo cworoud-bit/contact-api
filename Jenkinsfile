@@ -80,7 +80,7 @@ pipeline {
         stage('Semgrep') {
           steps {
             sh 'mkdir -p reports'
-            sh 'docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/src" semgrep/semgrep semgrep scan --config p/javascript --config p/owasp-top-ten --error --json --output /src/reports/semgrep.json /src'
+            sh 'docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -e SEMGREP_SEND_METRICS=off -v "$PWD:/src" semgrep/semgrep semgrep scan --config p/javascript --config p/owasp-top-ten --error --json --output /src/reports/semgrep.json /src'
           }
         }
         stage('npm audit') {
