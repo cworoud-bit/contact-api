@@ -5,7 +5,7 @@ pipeline {
     disableConcurrentBuilds()
     skipDefaultCheckout(true)
     timestamps()
-    timeout(time: 20, unit: 'MINUTES')
+    timeout(time: 40, unit: 'MINUTES')
   }
 
   environment {
@@ -69,11 +69,53 @@ pipeline {
       }
     }
 
+    stage('Security') {
+      parallel {
+        stage('Gitleaks') {
+          steps {
+            sh 'mkdir -p reports'
+            sh 'docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.0 git /repo --report-format json --report-path /repo/reports/gitleaks.json'
+          }
+        }
+        stage('Semgrep') {
+          steps {
+            sh 'mkdir -p reports'
+            sh 'docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/src" semgrep/semgrep semgrep scan --config p/javascript --config p/owasp-top-ten --error --json --output /src/reports/semgrep.json /src'
+          }
+        }
+        stage('npm audit') {
+          agent {
+            docker {
+              image 'node:24-alpine'
+              args '-e npm_config_cache=/tmp/.npm'
+              reuseNode true
+            }
+          }
+          steps {
+            sh 'mkdir -p reports && npm audit --audit-level=critical --json > reports/npm-audit.json'
+          }
+        }
+      }
+    }
+
     stage('Build image') {
       steps {
         sh 'docker build -t "$IMAGE_NAME:$SHORT_SHA" --label "org.opencontainers.image.revision=$GIT_COMMIT" .'
         sh 'echo "$IMAGE_NAME:$SHORT_SHA" > image.txt'
         archiveArtifacts artifacts: 'image.txt', fingerprint: true
+      }
+    }
+
+    stage('Image scan') {
+      steps {
+        sh '''
+          IGN=""
+          if [ -f .trivyignore ]; then IGN="--ignorefile /src/.trivyignore"; fi
+          docker run --rm -v trivy-cache:/root/.cache/ -v "$PWD:/src" \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image $IGN \
+            --severity CRITICAL --exit-code 1 "$IMAGE_NAME:$SHORT_SHA"
+        '''
       }
     }
 
@@ -98,6 +140,7 @@ pipeline {
   post {
     always {
       junit allowEmptyResults: true, testResults: 'reports/junit.xml'
+      archiveArtifacts artifacts: 'reports/**', allowEmptyArchive: true
     }
     success {
       echo "Pipeline réussi : ${env.IMAGE_NAME}:${env.SHORT_SHA}"
